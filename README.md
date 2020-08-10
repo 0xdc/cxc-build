@@ -43,8 +43,6 @@
 
 There are a few things that need to be fixed or added. They are as follows.
 
- * Allow for selection of install and build paths at execution time without the need to edit the script
- * Allow for selection of targets to build and/or not build
  * Fix the `x-unknown-linux` targets so they build and then enable them
  * Add an `avr` target
 

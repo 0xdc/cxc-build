@@ -659,9 +659,15 @@ def print_table(lst, columns = 2):
 
 def print_startup():
 	cmplrs = reduce_compilers()
+	targets = reduce_compilers(get_all=True)
 	log(f'Active working directory: {WORKING_DIR}')
-	log(f'Building the following {len(cmplrs)} targets:')
-	print_table(cmplrs)
+	inf(f'Found {len(targets)} compiler targets:')
+	print_table(targets)
+	if cmplrs and cmplrs != targets:
+		log(f'Building the following {len(cmplrs)} target{"" if len(cmplrs) == 1 else "s"}:')
+		print_table(cmplrs)
+	else:
+		log("Building all targets")
 	log('With the following versions:')
 	log(f'  GMP:      {COMPONENT_VERSIONS["GMP"]}')
 	log(f'  MPFR:     {COMPONENT_VERSIONS["MPFR"]}')
@@ -679,12 +685,15 @@ def print_startup():
 	log(f'Build directory:    {BUILD_DIR}')
 	log(f'Source directory:   {SRC_DIR}')
 
-def reduce_compilers():
+def reduce_compilers(get_all=False):
 	cmpl = []
 	for arch, t in COMPILERS.items():
 		for k, v in t.items():
 			if v['build']:
-				cmpl.append(f'{arch}-{k}' if len(k) > 0 else arch)
+				archk = f'{arch}-{k}' if len(k) > 0 else arch
+				if not get_all and archk not in args.targets:
+					continue
+				cmpl.append(archk)
 	return cmpl
 
 def setup_dirs():
@@ -1146,7 +1155,10 @@ def build_targets():
 	for arch, t in COMPILERS.items():
 		for k, v in t.items():
 			if v['build']:
-				if not build_target(f'{arch}-{k}' if len(k) > 0 else arch, v):
+				archk = f'{arch}-{k}' if len(k) > 0 else arch
+				if args.targets and archk not in args.targets:
+					continue
+				if not build_target(archk, v):
 					err(f'Unable to build target {arch}-{k}')
 					return False
 
@@ -1156,7 +1168,15 @@ if __name__ == '__main__':
 	from argparse import ArgumentParser
 
 	cli = ArgumentParser(description='GCC cross-compiler batch build script')
+	cli.add_argument("--prefix", default=PREFIX, help=f"Set the PREFIX path ({PREFIX})")
+	cli.add_argument("--sysroot", default=SYSROOT, help=f"Set the SYSROOT path ({SYSROOT})")
+	cli.add_argument("--working-dir", default=WORKING_DIR, help=f"Set the temporary working directory ({WORKING_DIR})")
+	cli.add_argument("targets", default=[], nargs="*", type=str, help="Limit targets to build (default: build all)")
+	args = cli.parse_args()
 
+	PREFIX = args.prefix
+	SYSROOT = args.sysroot
+	WORKING_DIR = args.working_dir
 
 
 	setup_dirs()
